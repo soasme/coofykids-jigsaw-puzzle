@@ -208,7 +208,7 @@ def generate_jigsaw_video(input_dir, output, asset_path=None, fps=24, compile=Fa
     for idx, page in enumerate(config.get('clips', [])):
         clip = make_jigsaw_clip(page, asset_path)
         clip_path = os.path.join(temp_dir, f"clip_{idx}.mp4")
-        logger.text = f'Processing clip {idx + 1}/{len(config.get("clips", []))}: '
+        logger.text = f'Processing clip {idx + 1}/{len(config.get("clips", []))}'
         clip.write_videofile(clip_path, fps=fps, codec="libx264", audio_codec="aac", logger=logger)
         clip_paths.append(clip_path)
     # Build final video sequence
@@ -236,7 +236,7 @@ def generate_jigsaw_video(input_dir, output, asset_path=None, fps=24, compile=Fa
             final = final.with_audio(CompositeAudioClip([final.audio, audio_bgm]))
         else:
             final = final.with_audio(audio_bgm)
-    logger.text = 'Processing final video: '
+    logger.text = 'Processing final video'
     final.write_videofile(output, fps=fps, codec="libx264", audio_codec="aac", logger=logger)
     # Cleanup temp clips
     import shutil
