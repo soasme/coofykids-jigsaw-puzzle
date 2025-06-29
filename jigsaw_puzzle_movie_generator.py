@@ -26,6 +26,7 @@ import argparse
 from pathlib import Path
 from moviepy import (
     ImageClip, TextClip, CompositeVideoClip, 
+    CompositeAudioClip,
     AudioFileClip, VideoFileClip,
     concatenate_videoclips, vfx, afx
 )
@@ -212,14 +213,19 @@ def generate_jigsaw_video(input_dir, output, asset_path=None, fps=24, compile=Fa
         return
     final = clips[0] if len(clips) == 1 else concatenate_videoclips(clips, method="compose")
     if bgm:
-        audio = AudioFileClip(bgm)
-        audio = (
-            audio.with_effects([
+        audio_bgm = AudioFileClip(bgm)
+        audio_bgm = (
+            audio_bgm.with_effects([
                 afx.AudioLoop(duration=final.duration),
-                afx.AudioFadeOut(duration=2)
+                afx.AudioFadeOut(duration=2),
+                afx.MultiplyVolume(0.33)
             ])
         )
-        final = final.with_audio(audio)
+        # Mix with existing audio
+        if final.audio is not None:
+            final = final.with_audio(CompositeAudioClip([final.audio, audio_bgm]))
+        else:
+            final = final.with_audio(audio_bgm)
     final.write_videofile(output, fps=fps, codec="libx264", audio_codec="aac", logger=logger)
 
 
