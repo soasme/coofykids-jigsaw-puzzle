@@ -190,7 +190,7 @@ def make_jigsaw_clip(config, asset_path):
     finally:
         shutil.rmtree(tmp_dir)
 
-def generate_jigsaw_video(input_dir, output, asset_path=None, fps=24, compile=False):
+def generate_jigsaw_video(input_dir, output, asset_path=None, fps=24, compile=False, logger=None):
     """Entry point for generating jigsaw video from arguments."""
     with open(f"{input_dir}/config.json") as f:
         config = json.load(f)
@@ -204,7 +204,7 @@ def generate_jigsaw_video(input_dir, output, asset_path=None, fps=24, compile=Fa
         print("No valid clips found.")
         return
     final = clips[0] if len(clips) == 1 else concatenate_videoclips(clips, method="compose")
-    final.write_videofile(output, fps=fps, codec="libx264", audio_codec="aac")
+    final.write_videofile(output, fps=fps, codec="libx264", audio_codec="aac", logger=logger)
 
 
 def main():

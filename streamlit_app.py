@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import shutil
 import importlib.util
+from utils import MoviePyProgressLogger
 
 st.title("🎬 Jigsaw Puzzle Movie Generator")
 
@@ -34,6 +35,7 @@ if generate_btn:
         st.error("Please upload all required files and provide a valid JSON config.")
     else:
         with st.spinner("Generating movie, please wait..."):
+            
             with tempfile.TemporaryDirectory() as tmpdir:
                 for file in uploaded_files:
                     file_path = os.path.join(tmpdir, file.name)
@@ -48,17 +50,21 @@ if generate_btn:
                 with open(config_path, "w") as f:
                     json.dump(config_json, f)
                 output_path = os.path.join(tmpdir, "output.mp4")
-                # Import and call the entry function directly
                 try:
                     spec = importlib.util.spec_from_file_location("jigsaw_puzzle_movie_generator", os.path.join(os.path.dirname(__file__), "jigsaw_puzzle_movie_generator.py"))
                     jigsaw_mod = importlib.util.module_from_spec(spec)
                     spec.loader.exec_module(jigsaw_mod)
+
+                    progress_bar_placeholder = st.empty()
+                    progress_bar = progress_bar_placeholder.progress(0, text="Starting video processing...")
+
                     jigsaw_mod.generate_jigsaw_video(
                         input_dir=tmpdir,
                         output=output_path,
                         asset_path=None,
                         fps=fps,
-                        compile=False
+                        compile=False,
+                        logger=MoviePyProgressLogger(progress_bar),
                     )
                 except Exception as e:
                     st.error(f"Movie generation failed:\n{e}")
