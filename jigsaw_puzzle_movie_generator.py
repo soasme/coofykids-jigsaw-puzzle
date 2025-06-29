@@ -98,7 +98,7 @@ def create_puzzle_page(background_path, piece_paths, outline_path, frame_size,
     if is_last_piece and text:
         text_clip = TextClip(
             text=text,
-            font="Arial",
+            font=str(get_asset_path(asset_path, "Super_Adorable.ttf")),
             font_size=200,
             color="black",
             stroke_color='#ffffff',
