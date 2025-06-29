@@ -201,17 +201,28 @@ def generate_jigsaw_video(input_dir, output, asset_path=None, fps=24, compile=Fa
     # Set asset path from argument or input dir
     asset_path = asset_path if asset_path else input_dir
     asset_path = os.path.dirname(os.path.abspath(__file__)) + '/assets,' + asset_path
-    clips = []
+    import tempfile
+    temp_dir = tempfile.mkdtemp()
+    clip_paths = []
+    # Generate each puzzle clip as a separate mp4
+    for idx, page in enumerate(config.get('clips', [])):
+        clip = make_jigsaw_clip(page, asset_path)
+        clip_path = os.path.join(temp_dir, f"clip_{idx}.mp4")
+        logger.text = f'Processing clip {idx + 1}/{len(config.get("clips", []))}: '
+        clip.write_videofile(clip_path, fps=fps, codec="libx264", audio_codec="aac", logger=logger)
+        clip_paths.append(clip_path)
+    # Build final video sequence
+    final_clips = []
     if intro:
-        clips.append(VideoFileClip(intro))
-    for page in config.get('clips', []):
-        clips.append(make_jigsaw_clip(page, asset_path))
+        final_clips.append(VideoFileClip(intro))
+    for path in clip_paths:
+        final_clips.append(VideoFileClip(path))
     if outtro:
-        clips.append(VideoFileClip(outtro))
-    if not clips:
+        final_clips.append(VideoFileClip(outtro))
+    if not final_clips:
         print("No valid clips found.")
         return
-    final = clips[0] if len(clips) == 1 else concatenate_videoclips(clips, method="compose")
+    final = final_clips[0] if len(final_clips) == 1 else concatenate_videoclips(final_clips, method="compose")
     if bgm:
         audio_bgm = AudioFileClip(bgm)
         audio_bgm = (
@@ -221,13 +232,15 @@ def generate_jigsaw_video(input_dir, output, asset_path=None, fps=24, compile=Fa
                 afx.MultiplyVolume(0.33)
             ])
         )
-        # Mix with existing audio
         if final.audio is not None:
             final = final.with_audio(CompositeAudioClip([final.audio, audio_bgm]))
         else:
             final = final.with_audio(audio_bgm)
+    logger.text = 'Processing final video: '
     final.write_videofile(output, fps=fps, codec="libx264", audio_codec="aac", logger=logger)
-
+    # Cleanup temp clips
+    import shutil
+    shutil.rmtree(temp_dir)
 
 def main():
     args = parse_args()

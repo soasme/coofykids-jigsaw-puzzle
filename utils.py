@@ -13,10 +13,11 @@ def get_asset_path(dir, path):
     raise Exception(f'Asset not found: {path}')
 
 class MoviePyProgressLogger(ProgressBarLogger):
-    def __init__(self, progress_bar):
+    def __init__(self, progress_bar, text='Processing video: '):
         super().__init__()
         self.progress_bar = progress_bar
         self.last_message = ''
+        self.text = text
 
     def callback(self, **changes):
         # Use 'bars' dict to get progress
@@ -27,4 +28,4 @@ class MoviePyProgressLogger(ProgressBarLogger):
             total = bar['total']
             if total > 0:
                 percentage = int((index / total) * 100)
-                self.progress_bar.progress(percentage, text=f"Processing video: {percentage}%")
+                self.progress_bar.progress(percentage, text=f"{self.text}: {percentage}%")
