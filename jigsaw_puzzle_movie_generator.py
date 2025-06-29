@@ -44,6 +44,8 @@ def parse_args():
     parser.add_argument('--compile', action='store_true', help='Compile the video')
     parser.add_argument('--asset-path', type=str, help='Comma separated asset search paths', default=None)
     parser.add_argument('--fps', type=int, help='Frames per second for output video', default=24)
+    parser.add_argument('--intro', type=str, help='Intro mp4 file to prepend', default=None)
+    parser.add_argument('--outtro', type=str, help='Outtro mp4 file to append', default=None)
     return parser.parse_args()
 
 def create_puzzle_page(background_path, piece_paths, outline_path, frame_size,
@@ -104,7 +106,7 @@ def create_puzzle_page(background_path, piece_paths, outline_path, frame_size,
             stroke_color='#ffffff',
             stroke_width=5,
             margin=(50, 50),
-        ).with_position(("center", 825))
+        ).with_position(("center", 714))
         text_clip = text_clip.with_duration(extra_last_duration).with_start(page_duration).with_effects([
             vfx.CrossFadeIn(fade_duration)
         ])
@@ -190,7 +192,7 @@ def make_jigsaw_clip(config, asset_path):
     finally:
         shutil.rmtree(tmp_dir)
 
-def generate_jigsaw_video(input_dir, output, asset_path=None, fps=24, compile=False, logger=None):
+def generate_jigsaw_video(input_dir, output, asset_path=None, fps=24, compile=False, logger=None, intro=None, outtro=None):
     """Entry point for generating jigsaw video from arguments."""
     with open(f"{input_dir}/config.json") as f:
         config = json.load(f)
@@ -198,8 +200,12 @@ def generate_jigsaw_video(input_dir, output, asset_path=None, fps=24, compile=Fa
     asset_path = asset_path if asset_path else input_dir
     asset_path = os.path.dirname(os.path.abspath(__file__)) + '/assets,' + asset_path
     clips = []
+    if intro:
+        clips.append(VideoFileClip(intro))
     for page in config.get('clips', []):
         clips.append(make_jigsaw_clip(page, asset_path))
+    if outtro:
+        clips.append(VideoFileClip(outtro))
     if not clips:
         print("No valid clips found.")
         return
@@ -214,7 +220,9 @@ def main():
         output=args.output,
         asset_path=args.asset_path,
         fps=args.fps,
-        compile=args.compile
+        compile=args.compile,
+        intro=args.intro,
+        outtro=args.outtro
     )
 
 if __name__ == '__main__':

@@ -10,7 +10,22 @@ from utils import MoviePyProgressLogger
 st.title("🎬 Jigsaw Puzzle Movie Generator")
 
 st.write("""
-Upload all required assets (images, audio, etc.), paste your JSON config, and generate a jigsaw puzzle reveal video!
+Paste your JSON config, Upload all png/mp4 assets, and generate a jigsaw puzzle reveal video!
+         
+Config example:
+```json
+{
+  "clips": [
+    {
+      "background": "bg.png",
+      "image": "1.png",
+      "text": "Blue Whale"
+    }
+  ]
+}
+```         
+You can put intro.mp4 and outtro.mp4 in the upload, and they will be prepended and appended to the video.
+     
 """)
 
 uploaded_files = st.file_uploader(
@@ -35,12 +50,17 @@ if generate_btn:
         st.error("Please upload all required files and provide a valid JSON config.")
     else:
         with st.spinner("Generating movie, please wait..."):
-            
             with tempfile.TemporaryDirectory() as tmpdir:
+                intro_path = None
+                outtro_path = None
                 for file in uploaded_files:
                     file_path = os.path.join(tmpdir, file.name)
                     with open(file_path, "wb") as f:
                         f.write(file.getbuffer())
+                    if file.name == "intro.mp4":
+                        intro_path = file_path
+                    if file.name == "outtro.mp4":
+                        outtro_path = file_path
                 config_path = os.path.join(tmpdir, "config.json")
                 try:
                     config_json = json.loads(config_text)
@@ -54,17 +74,16 @@ if generate_btn:
                     spec = importlib.util.spec_from_file_location("jigsaw_puzzle_movie_generator", os.path.join(os.path.dirname(__file__), "jigsaw_puzzle_movie_generator.py"))
                     jigsaw_mod = importlib.util.module_from_spec(spec)
                     spec.loader.exec_module(jigsaw_mod)
-
-                    progress_bar_placeholder = st.empty()
-                    progress_bar = progress_bar_placeholder.progress(0, text="Starting video processing...")
-
+                    logger = MoviePyProgressLogger(st.progress(0))
                     jigsaw_mod.generate_jigsaw_video(
                         input_dir=tmpdir,
                         output=output_path,
                         asset_path=None,
                         fps=fps,
                         compile=False,
-                        logger=MoviePyProgressLogger(progress_bar),
+                        logger=logger,
+                        intro=intro_path,
+                        outtro=outtro_path
                     )
                 except Exception as e:
                     st.error(f"Movie generation failed:\n{e}")
