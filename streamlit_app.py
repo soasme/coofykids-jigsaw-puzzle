@@ -10,7 +10,11 @@ from utils import MoviePyProgressLogger
 st.title("🎬 Jigsaw Puzzle Movie Generator")
 
 st.write("""
-Paste your JSON config, Upload all png/mp4 assets, and generate a jigsaw puzzle reveal video!
+Upload all required assets (images, audio, etc.), paste your JSON config, and generate a jigsaw puzzle reveal video!
+
+- If you upload a file named `intro.mp4`, it will be used as the intro.
+- If you upload a file named `outtro.mp4`, it will be used as the outtro.
+- If you upload a file named `bgm.mp3`, it will be used as background music (looped, volume 0.33).
          
 Config example:
 ```json
@@ -23,9 +27,7 @@ Config example:
     }
   ]
 }
-```         
-You can put intro.mp4 and outtro.mp4 in the upload, and they will be prepended and appended to the video.
-     
+```
 """)
 
 uploaded_files = st.file_uploader(
@@ -53,6 +55,7 @@ if generate_btn:
             with tempfile.TemporaryDirectory() as tmpdir:
                 intro_path = None
                 outtro_path = None
+                bgm_path = None
                 for file in uploaded_files:
                     file_path = os.path.join(tmpdir, file.name)
                     with open(file_path, "wb") as f:
@@ -61,6 +64,8 @@ if generate_btn:
                         intro_path = file_path
                     if file.name == "outtro.mp4":
                         outtro_path = file_path
+                    if file.name == "bgm.mp3":
+                        bgm_path = file_path
                 config_path = os.path.join(tmpdir, "config.json")
                 try:
                     config_json = json.loads(config_text)
@@ -83,7 +88,8 @@ if generate_btn:
                         compile=False,
                         logger=logger,
                         intro=intro_path,
-                        outtro=outtro_path
+                        outtro=outtro_path,
+                        bgm=bgm_path
                     )
                 except Exception as e:
                     st.error(f"Movie generation failed:\n{e}")

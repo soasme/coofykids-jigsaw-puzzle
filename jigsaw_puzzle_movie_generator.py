@@ -27,7 +27,7 @@ from pathlib import Path
 from moviepy import (
     ImageClip, TextClip, CompositeVideoClip, 
     AudioFileClip, VideoFileClip,
-    concatenate_videoclips, vfx
+    concatenate_videoclips, vfx, afx
 )
 
 from utils import get_asset_path
@@ -46,6 +46,7 @@ def parse_args():
     parser.add_argument('--fps', type=int, help='Frames per second for output video', default=24)
     parser.add_argument('--intro', type=str, help='Intro mp4 file to prepend', default=None)
     parser.add_argument('--outtro', type=str, help='Outtro mp4 file to append', default=None)
+    parser.add_argument('--bgm', type=str, help='Background music mp3 file to loop', default=None)
     return parser.parse_args()
 
 def create_puzzle_page(background_path, piece_paths, outline_path, frame_size,
@@ -192,7 +193,7 @@ def make_jigsaw_clip(config, asset_path):
     finally:
         shutil.rmtree(tmp_dir)
 
-def generate_jigsaw_video(input_dir, output, asset_path=None, fps=24, compile=False, logger=None, intro=None, outtro=None):
+def generate_jigsaw_video(input_dir, output, asset_path=None, fps=24, compile=False, logger=None, intro=None, outtro=None, bgm=None):
     """Entry point for generating jigsaw video from arguments."""
     with open(f"{input_dir}/config.json") as f:
         config = json.load(f)
@@ -210,6 +211,15 @@ def generate_jigsaw_video(input_dir, output, asset_path=None, fps=24, compile=Fa
         print("No valid clips found.")
         return
     final = clips[0] if len(clips) == 1 else concatenate_videoclips(clips, method="compose")
+    if bgm:
+        audio = AudioFileClip(bgm)
+        audio = (
+            audio.with_effects([
+                afx.AudioLoop(duration=final.duration),
+                afx.AudioFadeOut(duration=2)
+            ])
+        )
+        final = final.with_audio(audio)
     final.write_videofile(output, fps=fps, codec="libx264", audio_codec="aac", logger=logger)
 
 
@@ -222,7 +232,8 @@ def main():
         fps=args.fps,
         compile=args.compile,
         intro=args.intro,
-        outtro=args.outtro
+        outtro=args.outtro,
+        bgm=args.bgm
     )
 
 if __name__ == '__main__':
