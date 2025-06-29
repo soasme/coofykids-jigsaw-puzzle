@@ -4,6 +4,7 @@ import os
 import json
 from pathlib import Path
 import shutil
+import importlib.util
 
 st.title("🎬 Jigsaw Puzzle Movie Generator")
 
@@ -33,14 +34,11 @@ if generate_btn:
         st.error("Please upload all required files and provide a valid JSON config.")
     else:
         with st.spinner("Generating movie, please wait..."):
-            # Create a temp dir for assets
             with tempfile.TemporaryDirectory() as tmpdir:
-                # Save uploaded files
                 for file in uploaded_files:
                     file_path = os.path.join(tmpdir, file.name)
                     with open(file_path, "wb") as f:
                         f.write(file.getbuffer())
-                # Save config.json
                 config_path = os.path.join(tmpdir, "config.json")
                 try:
                     config_json = json.loads(config_text)
@@ -49,19 +47,22 @@ if generate_btn:
                     st.stop()
                 with open(config_path, "w") as f:
                     json.dump(config_json, f)
-                # Output path
                 output_path = os.path.join(tmpdir, "output.mp4")
-                # Run the movie generator
-                import subprocess
-                result = subprocess.run([
-                    "python", "jigsaw_puzzle_movie_generator.py",
-                    "--input-dir", tmpdir,
-                    "--output", output_path,
-                    "--fps", str(fps)
-                ], capture_output=True, text=True)
-                if result.returncode != 0:
-                    st.error(f"Movie generation failed:\n{result.stderr}")
-                elif not os.path.exists(output_path):
+                # Import and call the entry function directly
+                try:
+                    spec = importlib.util.spec_from_file_location("jigsaw_puzzle_movie_generator", os.path.join(os.path.dirname(__file__), "jigsaw_puzzle_movie_generator.py"))
+                    jigsaw_mod = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(jigsaw_mod)
+                    jigsaw_mod.generate_jigsaw_video(
+                        input_dir=tmpdir,
+                        output=output_path,
+                        asset_path=None,
+                        fps=fps,
+                        compile=False
+                    )
+                except Exception as e:
+                    st.error(f"Movie generation failed:\n{e}")
+                if not os.path.exists(output_path):
                     st.error("Movie file was not created.")
                 else:
                     st.success("Movie generated!")

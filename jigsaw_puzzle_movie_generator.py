@@ -190,25 +190,32 @@ def make_jigsaw_clip(config, asset_path):
     finally:
         shutil.rmtree(tmp_dir)
 
-def main():
-    args = parse_args()
-    with open(f"{args.input_dir}/config.json") as f:
+def generate_jigsaw_video(input_dir, output, asset_path=None, fps=24, compile=False):
+    """Entry point for generating jigsaw video from arguments."""
+    with open(f"{input_dir}/config.json") as f:
         config = json.load(f)
-    
     # Set asset path from argument or input dir
-    asset_path = args.asset_path if args.asset_path else args.input_dir
+    asset_path = asset_path if asset_path else input_dir
     asset_path = os.path.dirname(os.path.abspath(__file__)) + '/assets,' + asset_path
-    
     clips = []
     for page in config.get('clips', []):
         clips.append(make_jigsaw_clip(page, asset_path))
-    
     if not clips:
         print("No valid clips found.")
         return
-    
     final = clips[0] if len(clips) == 1 else concatenate_videoclips(clips, method="compose")
-    final.write_videofile(args.output, fps=args.fps, codec="libx264", audio_codec="aac")
+    final.write_videofile(output, fps=fps, codec="libx264", audio_codec="aac")
+
+
+def main():
+    args = parse_args()
+    generate_jigsaw_video(
+        input_dir=args.input_dir,
+        output=args.output,
+        asset_path=args.asset_path,
+        fps=args.fps,
+        compile=args.compile
+    )
 
 if __name__ == '__main__':
     main()
