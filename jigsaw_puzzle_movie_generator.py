@@ -103,7 +103,7 @@ def create_puzzle_page(background_path, piece_paths, outline_path, frame_size,
         text_clip = TextClip(
             text=text,
             font=str(get_asset_path(asset_path, "Super_Adorable.ttf")),
-            font_size=200,
+            font_size=150,
             color="black",
             stroke_color='#ffffff',
             stroke_width=5,
@@ -118,7 +118,7 @@ def create_puzzle_page(background_path, piece_paths, outline_path, frame_size,
         confetti_path = str(get_asset_path(asset_path, "Confetti.gif"))
         confetti_clip = VideoFileClip(confetti_path, has_mask=True)
         # Center confetti
-        confetti_clip = confetti_clip.with_start(page_duration).with_duration(confetti_clip.duration)
+        confetti_clip = confetti_clip.with_start(page_duration).with_duration(2)
         confetti_clip = confetti_clip.with_position((
             (CANVA_WIDTH - confetti_clip.w) // 2,
             (CANVA_HEIGHT - confetti_clip.h) // 2
@@ -135,8 +135,8 @@ def create_puzzle_page(background_path, piece_paths, outline_path, frame_size,
     composite = composite.with_audio(guitar_audio)
     return composite
 
-def make_jigsaw_clip(config, asset_path):
-    """Create a complete jigsaw puzzle sequence for one image"""
+def make_jigsaw_clip(config, asset_path, output_path, fps=24):
+    """Create a complete jigsaw puzzle sequence for one image and write to mp4 file."""
     background_path = str(get_asset_path(asset_path, config['background']))
     image_path = str(get_asset_path(asset_path, config['image']))
     rows = config.get('rows', 2)
@@ -189,8 +189,17 @@ def make_jigsaw_clip(config, asset_path):
                 is_first_piece=is_first_piece,
             )
             pages.append(page)
-        final_clip = concatenate_videoclips(pages, method="compose")
-        return final_clip
+        with concatenate_videoclips(pages, method="compose") as final_clip:
+            final_clip.write_videofile(output_path, fps=fps, codec="libx264", audio_codec="aac")
+
+            # Cleanup clips
+            for page in pages:
+                for clip in page.clips:
+                    clip.close()
+                    if clip.audio:
+                        clip.audio.close()
+                page.close()
+        return output_path
     finally:
         shutil.rmtree(tmp_dir)
 
@@ -206,10 +215,9 @@ def generate_jigsaw_video(input_dir, output, asset_path=None, fps=24, compile=Fa
     clip_paths = []
     # Generate each puzzle clip as a separate mp4
     for idx, page in enumerate(config.get('clips', [])):
-        clip = make_jigsaw_clip(page, asset_path)
         clip_path = os.path.join(temp_dir, f"clip_{idx}.mp4")
-        logger.text = f'Processing clip {idx + 1}/{len(config.get("clips", []))}'
-        clip.write_videofile(clip_path, fps=fps, codec="libx264", audio_codec="aac", logger=logger)
+        make_jigsaw_clip(page, asset_path, clip_path, fps=fps)
+        print(clip_path)
         clip_paths.append(clip_path)
     # Build final video sequence
     final_clips = []
@@ -236,8 +244,8 @@ def generate_jigsaw_video(input_dir, output, asset_path=None, fps=24, compile=Fa
             final = final.with_audio(CompositeAudioClip([final.audio, audio_bgm]))
         else:
             final = final.with_audio(audio_bgm)
-    logger.text = 'Processing final video'
-    final.write_videofile(output, fps=fps, codec="libx264", audio_codec="aac", logger=logger)
+    final.write_videofile(output, fps=fps, codec="libx264", audio_codec="aac")
+    final.close()
     # Cleanup temp clips
     import shutil
     shutil.rmtree(temp_dir)
